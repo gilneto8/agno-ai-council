@@ -1,18 +1,25 @@
 # AI Council API
 
-A Python FastAPI application that orchestrates a council of 5 AI experts (powered by Google Gemini) to debate and evaluate ideas.
+A Python FastAPI application that orchestrates a council of 7 AI experts (powered by Google Gemini) to debate and evaluate ideas for a Portugal-based development team.
 
 ## Council Members
 
-The council consists of 5 distinct personas:
+The council consists of 7 members (6 voters + 1 facilitator):
 
-| Name | Role | Focus Area |
-|------|------|------------|
-| **Victoria Chen** | Venture Capitalist | Market viability, ROI, scalability |
-| **Marcus Webb** | Technical Architect | Technical feasibility, architecture, implementation |
-| **Priya Sharma** | UX Research Lead | User experience, adoption, behavioral patterns |
-| **Dr. Raven Cross** | Strategic Contrarian | Challenging assumptions, finding weaknesses |
-| **Jordan Ellis** | Strategic Synthesizer | Finding consensus, actionable recommendations |
+| Name | Role | Focus Area | Votes |
+|------|------|------------|-------|
+| **Carlos Mendes** | Technical Architect | Tech feasibility, stack recommendations | ✓ |
+| **Sofia Almeida** | Venture Capitalist | Market fit, 0-10 potential score | ✓ |
+| **Inês Ferreira** | UX Designer | User journeys, 3-click core task | ✓ |
+| **Miguel Santos** | Security Auditor | GDPR compliance, data risks, priorities | ✓ |
+| **Ana Costa** | Product Owner | Target audience, value proposition, unmet need | ✓ |
+| **Dr. Raven Cruz** | Strategic Contrarian | Stress-tests ideas, challenges assumptions | ✓ |
+| **João Oliveira** | Council Synthesizer | Facilitates consensus, guides to decision | — |
+
+### Decision Rules
+- Each voting member outputs: **Yay** or **Nay** (no "Pivot" allowed)
+- Final verdict: **GO** or **NO-GO** based on majority
+- If tied, the Synthesizer facilitates another round with adjusted scope
 
 ## Prerequisites
 

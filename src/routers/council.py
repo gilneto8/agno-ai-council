@@ -20,18 +20,23 @@ router = APIRouter(prefix="/council", tags=["council"])
     "/call_council",
     response_model=CouncilResponse,
     summary="Run a council debate",
-    description="Submit a note to be debated by a council of 5 AI experts with distinct personas.",
+    description="Submit a note to be debated by a council of 7 AI experts (Portugal-based team context). Returns GO/NO-GO decision.",
 )
 async def call_council(note: NoteInput) -> CouncilResponse:
     """
     Run a council debate on the provided note.
 
-    The council consists of 5 members:
-    - Victoria Chen (Venture Capitalist): Market viability and ROI
-    - Marcus Webb (Tech Architect): Technical feasibility
-    - Priya Sharma (UX Lead): User experience and adoption
-    - Dr. Raven Cross (Contrarian): Challenges assumptions
-    - Jordan Ellis (Synthesizer): Brings perspectives together
+    The council consists of 7 members (6 voters + 1 facilitator):
+    - Carlos Mendes (Tech Architect): Technical feasibility, stack recommendations
+    - Sofia Almeida (VC): Market fit, 0-10 potential score
+    - Inês Ferreira (UX Designer): User journeys, 3-click core task
+    - Miguel Santos (Security Auditor): Compliance, GDPR, data risks
+    - Ana Costa (Product Owner): Target audience, value proposition
+    - Dr. Raven Cruz (Contrarian): Challenges assumptions, stress-tests ideas
+    - João Oliveira (Synthesizer): Facilitates consensus (non-voting)
+
+    Context: Portugal-based small team, fast results preferred.
+    Output: Clear GO/NO-GO decision (no pivots allowed).
 
     Args:
         note: The input note containing the idea to debate.
