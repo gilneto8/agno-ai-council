@@ -8,6 +8,7 @@ Defines 7 council members with distinct personas, each powered by Gemini.
 
 from agno.agent import Agent
 from agno.models.google import Gemini
+from agno.team import Team
 
 from src.config import settings
 
@@ -189,7 +190,7 @@ def _create_moderators() -> tuple[Agent, Agent]:
     return contrarian, synthesizer
 
 
-def create_council_team() -> Agent:
+def create_council_team() -> Team:
     """
     Create the council team with 7 members orchestrated by a moderator.
 
@@ -198,7 +199,7 @@ def create_council_team() -> Agent:
     - 1 synthesizer who facilitates but focuses on consensus
 
     Returns:
-        Agent: The orchestrator agent with the council team.
+        Team: The orchestrator team with all council members.
     """
     voting_members = _create_voting_members()
     contrarian, synthesizer = _create_moderators()
@@ -206,9 +207,9 @@ def create_council_team() -> Agent:
     # All 7 members participate
     all_members = voting_members + [contrarian, synthesizer]
 
-    orchestrator = Agent(
+    orchestrator = Team(
         name="Council Moderator",
-        team=all_members,
+        members=all_members,
         model=_create_gemini_model(),
         instructions=[
             "You are the moderator of a 7-member expert council evaluating ideas.",
@@ -267,8 +268,6 @@ def create_council_team() -> Agent:
             "",
             "Keep debates focused. Do not output markdown code blocks.",
         ],
-        show_tool_calls=False,
-        markdown=True,
     )
 
     return orchestrator
