@@ -8,10 +8,13 @@ services:
       - "3001:8000"
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.0-flash-exp}
+      - COUNCIL_GEMINI_MODEL=${COUNCIL_GEMINI_MODEL:-gemini-2.0-flash-exp}
+      - DEV_TEAM_GEMINI_MODEL=${DEV_TEAM_GEMINI_MODEL:-gemini-2.0-flash-exp}
       - DEBUG=${DEBUG:-false}
     env_file:
       - .env
+    volumes:
+      - ./workspace:/app/workspace
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]

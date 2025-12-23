@@ -6,20 +6,41 @@ A Python FastAPI application that orchestrates a council of 7 AI experts (powere
 
 The council consists of 7 members (6 voters + 1 facilitator):
 
-| Name | Role | Focus Area | Votes |
-|------|------|------------|-------|
-| **Carlos Mendes** | Technical Architect | Tech feasibility, stack recommendations | ✓ |
-| **Sofia Almeida** | Venture Capitalist | Market fit, 0-10 potential score | ✓ |
-| **Inês Ferreira** | UX Designer | User journeys, 3-click core task | ✓ |
-| **Miguel Santos** | Security Auditor | GDPR compliance, data risks, priorities | ✓ |
-| **Ana Costa** | Product Owner | Target audience, value proposition, unmet need | ✓ |
-| **Dr. Raven Cruz** | Strategic Contrarian | Stress-tests ideas, challenges assumptions | ✓ |
-| **João Oliveira** | Council Synthesizer | Facilitates consensus, guides to decision | — |
+| Role | Focus Area | Votes |
+|------|------------|-------|
+| **Technical Architect** | Tech feasibility, stack recommendations | ✓ |
+| **Venture Capitalist** | Market fit, 0-10 potential score | ✓ |
+| **UX Designer** | User journeys, 3-click core task | ✓ |
+| **Security Auditor** | GDPR compliance, data risks, priorities | ✓ |
+| **Product Owner** | Target audience, value proposition, unmet need | ✓ |
+| **Strategic Contrarian** | Stress-tests ideas, challenges assumptions | ✓ |
+| **Council Synthesizer** | Facilitates consensus, guides to decision | — |
 
 ### Decision Rules
 - Each voting member outputs: **Yay** or **Nay** (no "Pivot" allowed)
 - Final verdict: **GO** or **NO-GO** based on majority
 - If tied, the Synthesizer facilitates another round with adjusted scope
+
+## Virtual Dev Team
+
+A virtual software development team that can build Proofs of Concept (PoCs) based on user requests. They have access to the file system and can write code, create documentation, and set up infrastructure.
+
+### Team Members
+
+| Role | Responsibilities | Tools |
+|------|------------------|-------|
+| **Team Leader** | Orchestration, planning, delegation, review | File System |
+| **Frontend Developer** | React/Next.js UI implementation | File System, Shell |
+| **Backend Developer** | Python/FastAPI API implementation | File System, Shell |
+| **DevOps Engineer** | Docker, CI/CD, Infrastructure | File System, Shell |
+
+### Capabilities
+- **Project Scaffolding**: Creating folder structures and READMEs.
+- **Code Generation**: Writing functional Python, JavaScript, and configuration files.
+- **Documentation**: Explaining architecture and usage.
+- **Validation**: Verifying that created files exist and code is runnable.
+
+**Note:** The team works in the `/app/workspace` directory inside the container. To persist their work, mount a volume to this path.
 
 ## Prerequisites
 
@@ -64,6 +85,11 @@ curl http://localhost:8000/health
 curl -X POST http://localhost:8000/council/call_council \
   -H "Content-Type: application/json" \
   -d '{"content": "I want to build an AI-powered personal finance app that automatically categorizes expenses and suggests savings opportunities based on spending patterns."}'
+
+# Build a PoC with the Dev Team
+curl -X POST http://localhost:8000/dev_team/build_poc \
+  -H "Content-Type: application/json" \
+  -d '{"content": "Create a simple Python script named hello.py that prints Hello World, and a README.md explaining how to run it."}'
 ```
 
 ## API Endpoints
@@ -73,6 +99,7 @@ curl -X POST http://localhost:8000/council/call_council \
 | `GET` | `/` | API info and status |
 | `GET` | `/health` | Health check |
 | `POST` | `/council/call_council` | Run a council debate |
+| `POST` | `/dev_team/build_poc` | Build a Proof of Concept |
 
 ### Request Format
 
@@ -105,7 +132,8 @@ pip install -r requirements.txt
 
 # Set environment variables
 export GEMINI_API_KEY=your-api-key
-export GEMINI_MODEL=gemini-2.0-flash-exp
+export COUNCIL_GEMINI_MODEL=gemini-2.0-flash-exp
+export DEV_TEAM_GEMINI_MODEL=gemini-2.0-flash-exp
 
 # Run the server
 uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
@@ -134,7 +162,8 @@ Environment variables can be set in `.env` file or passed directly:
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `GEMINI_API_KEY` | Yes | - | Your Google Gemini API key |
-| `GEMINI_MODEL` | No | `gemini-2.0-flash-exp` | Gemini model to use |
+| `COUNCIL_GEMINI_MODEL` | No | `gemini-2.0-flash-exp` | Gemini model to use for the council |
+| `DEV_TEAM_GEMINI_MODEL` | No | `gemini-2.0-flash-exp` | Gemini model to use for the dev team |
 | `DEBUG` | No | `false` | Enable debug logging |
 
 ## Project Structure
@@ -148,12 +177,16 @@ agno-council/
 │   ├── council/
 │   │   ├── __init__.py
 │   │   └── agents.py        # Council agent definitions
+│   ├── dev_team/
+│   │   ├── __init__.py
+│   │   └── agents.py        # Dev Team agent definitions
 │   ├── models/
 │   │   ├── __init__.py
 │   │   └── schemas.py       # Pydantic models
 │   ├── routers/
 │   │   ├── __init__.py
-│   │   └── council.py       # API routes
+│   │   ├── council.py       # Council API routes
+│   │   └── dev_team.py      # Dev Team API routes
 │   ├── __init__.py
 │   └── main.py              # FastAPI application
 ├── .dockerignore

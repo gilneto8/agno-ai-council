@@ -11,7 +11,8 @@ class Settings(BaseSettings):
 
     # Gemini Configuration
     gemini_api_key: str
-    gemini_model: str = "gemini-2.0-flash-exp"
+    council_gemini_model: str = "gemini-2.0-flash-exp"
+    dev_team_gemini_model: str = "gemini-2.0-flash-exp"
 
     class Config:
         env_file = ".env"

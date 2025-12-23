@@ -48,7 +48,7 @@ If you're uncertain, lean towards the direction that best serves the team's cons
 def _create_gemini_model() -> Gemini:
     """Create a Gemini model instance with configured settings."""
     return Gemini(
-        id=settings.gemini_model,
+        id=settings.council_gemini_model,
         api_key=settings.gemini_api_key,
     )
 
@@ -62,7 +62,6 @@ def _create_voting_members() -> list[Agent]:
     """
     # 1. Tech Architect - Technical feasibility and stack
     tech_architect = Agent(
-        name="Carlos Mendes",
         role="Technical Architect",
         model=_create_gemini_model(),
         instructions=[
@@ -78,7 +77,6 @@ def _create_voting_members() -> list[Agent]:
 
     # 2. Venture Capitalist - Market fit and potential
     vc_agent = Agent(
-        name="Sofia Almeida",
         role="Venture Capitalist",
         model=_create_gemini_model(),
         instructions=[
@@ -94,7 +92,6 @@ def _create_voting_members() -> list[Agent]:
 
     # 3. UX Designer - User experience and journeys
     ux_designer = Agent(
-        name="Inês Ferreira",
         role="UX Designer",
         model=_create_gemini_model(),
         instructions=[
@@ -110,7 +107,6 @@ def _create_voting_members() -> list[Agent]:
 
     # 4. Security Auditor - Compliance and data handling
     security_auditor = Agent(
-        name="Miguel Santos",
         role="Security Auditor",
         model=_create_gemini_model(),
         instructions=[
@@ -126,7 +122,6 @@ def _create_voting_members() -> list[Agent]:
 
     # 5. Product Owner - Value proposition and audience
     product_owner = Agent(
-        name="Ana Costa",
         role="Product Owner",
         model=_create_gemini_model(),
         instructions=[
@@ -153,7 +148,6 @@ def _create_moderators() -> tuple[Agent, Agent]:
     """
     # Contrarian - Challenges assumptions (VOTES)
     contrarian = Agent(
-        name="Dr. Raven Cruz",
         role="Strategic Contrarian",
         model=_create_gemini_model(),
         instructions=[
@@ -171,7 +165,6 @@ def _create_moderators() -> tuple[Agent, Agent]:
 
     # Synthesizer - Facilitates consensus (DOES NOT VOTE in tally, but guides)
     synthesizer = Agent(
-        name="João Oliveira",
         role="Council Synthesizer",
         model=_create_gemini_model(),
         instructions=[
@@ -216,21 +209,21 @@ def create_council_team() -> Team:
             "The team is based in Portugal with limited developers. Always respond in English.",
             "",
             "COUNCIL MEMBERS (6 voters + 1 facilitator):",
-            "1. Carlos Mendes (Tech Architect) - Technical feasibility, stack",
-            "2. Sofia Almeida (VC) - Market fit, 0-10 potential score",
-            "3. Inês Ferreira (UX Designer) - User journeys, 3-click core task",
-            "4. Miguel Santos (Security Auditor) - Compliance, GDPR, risks",
-            "5. Ana Costa (Product Owner) - Audience, value prop, unmet need",
-            "6. Dr. Raven Cruz (Contrarian) - Challenges assumptions, stress-tests",
-            "7. João Oliveira (Synthesizer) - Facilitates consensus, no vote",
+            "1. Tech Architect - Technical feasibility, stack",
+            "2. VC - Market fit, 0-10 potential score",
+            "3. UX Designer - User journeys, 3-click core task",
+            "4. Security Auditor - Compliance, GDPR, risks",
+            "5. Product Owner - Audience, value prop, unmet need",
+            "6. Contrarian - Challenges assumptions, stress-tests",
+            "7. Synthesizer - Facilitates consensus, no vote",
             "",
             "PROCESS:",
             "1. Present the idea to all 6 voting members simultaneously.",
             "2. Collect each member's analysis in the mandatory format.",
-            "3. Have Dr. Raven Cruz challenge the strongest arguments.",
-            "4. Have João Oliveira synthesize and identify consensus.",
+            "3. Have Contrarian challenge the strongest arguments.",
+            "4. Have Synthesizer synthesize and identify consensus.",
             "5. Tally votes: Count Yay vs Nay from the 6 voting members.",
-            "6. If tied or unclear, João facilitates another round with adjusted scope.",
+            "6. If tied or unclear, Synthesizer facilitates another round with adjusted scope.",
             "7. NEVER accept 'Pivot' - iterate until there's a clear Yay/Nay majority.",
             "",
             "FINAL OUTPUT must include:",
@@ -249,16 +242,16 @@ def create_council_team() -> Team:
             "This section is for the Tech Lead to create tasks. Include:",
             "",
             "### Recommended Tech Stack",
-            "(From Carlos - be specific: frontend, backend, database, infra)",
+            "(From Tech Architect - be specific: frontend, backend, database, infra)",
             "",
             "### Core User Task",
-            "(From Inês - the one thing users must do in ≤3 clicks)",
+            "(From UX Designer - the one thing users must do in ≤3 clicks)",
             "",
             "### MVP Scope",
-            "(From Ana - bullet list of must-have features for v1)",
+            "(From Product Owner - bullet list of must-have features for v1)",
             "",
             "### Security Priorities",
-            "(From Miguel - top 3-5 compliance/security items to address first)",
+            "(From Security Auditor - top 3-5 compliance/security items to address first)",
             "",
             "### Suggested First Sprint",
             "(Synthesize: What should the team build in the first 1-2 weeks?)",

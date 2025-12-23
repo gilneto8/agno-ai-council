@@ -17,3 +17,10 @@ class CouncilResponse(BaseModel):
 
     status: str = Field(default="success", description="Status of the request")
     conclusion: str = Field(..., description="The council's debate conclusion")
+
+
+class DevTeamResponse(BaseModel):
+    """Response model from the dev team."""
+
+    status: str = Field(default="success", description="Status of the request")
+    result: str = Field(..., description="The dev team's execution result")

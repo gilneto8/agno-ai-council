@@ -1,3 +1,3 @@
-from .schemas import NoteInput, CouncilResponse
+from .schemas import NoteInput, CouncilResponse, DevTeamResponse
 
-__all__ = ["NoteInput", "CouncilResponse"]
+__all__ = ["NoteInput", "CouncilResponse", "DevTeamResponse"]
