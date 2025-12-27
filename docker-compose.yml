@@ -14,7 +14,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ./workspace:/app/workspace
+      - /root/workspace:/app/workspace
       - ./logs:/app/logs
     restart: unless-stopped
     healthcheck:
