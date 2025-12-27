@@ -111,15 +111,15 @@ The API will be available at `http://localhost:8000`.
 
 ```bash
 # Health check
-curl http://localhost:8000/health
+curl http://localhost:3001/health
 
 # Run a council debate
-curl -X POST http://localhost:8000/council/call_council \
+curl -X POST http://localhost:3001/council/call_council \
   -H "Content-Type: application/json" \
   -d '{"content": "I want to build an AI-powered personal finance app that automatically categorizes expenses and suggests savings opportunities based on spending patterns."}'
 
 # Build a PoC with the Dev Team
-curl -X POST http://localhost:8000/dev_team/build_poc \
+curl -X POST http://localhost:3001/dev_team/build_poc \
   -H "Content-Type: application/json" \
   -d '{"content": "Create a simple Python script named hello.py that prints Hello World, and a README.md explaining how to run it."}'
 ```
