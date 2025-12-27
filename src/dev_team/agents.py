@@ -6,6 +6,7 @@ Pipeline: Architect -> Backend -> Frontend -> DevOps -> Reviewer
 """
 
 import logging
+import time
 from pathlib import Path
 from typing import Any
 
@@ -161,6 +162,9 @@ REVIEWER_INSTRUCTIONS = [
 class DevTeamPipeline:
     """Sequential pipeline that runs agents one after another with context chaining."""
 
+    MAX_RETRIES = 5
+    BASE_DELAY = 30  # seconds
+
     def __init__(self):
         self.tools = _create_tools()
 
@@ -175,6 +179,32 @@ class DevTeamPipeline:
             markdown=True,
         )
 
+    def _run_with_retry(self, agent: Agent, prompt: str, step_name: str) -> Any:
+        """Run an agent with retry logic for rate limits."""
+        for attempt in range(self.MAX_RETRIES):
+            try:
+                response = agent.run(prompt)
+                # Check if response indicates an error (empty content often means failure)
+                if response and response.content:
+                    return response
+                # If empty, treat as potential rate limit issue
+                if attempt < self.MAX_RETRIES - 1:
+                    delay = self.BASE_DELAY * (2 ** attempt)
+                    logger.warning(f"{step_name}: Empty response, retrying in {delay}s (attempt {attempt + 1}/{self.MAX_RETRIES})")
+                    time.sleep(delay)
+            except Exception as e:
+                error_str = str(e)
+                if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str or "Too Many Requests" in error_str:
+                    if attempt < self.MAX_RETRIES - 1:
+                        delay = self.BASE_DELAY * (2 ** attempt)
+                        logger.warning(f"{step_name}: Rate limited, retrying in {delay}s (attempt {attempt + 1}/{self.MAX_RETRIES})")
+                        time.sleep(delay)
+                    else:
+                        raise
+                else:
+                    raise
+        return agent.run(prompt)  # Final attempt
+
     def run(self, request: str) -> Any:
         """
         Run the sequential pipeline: Architect -> Backend -> Frontend -> DevOps -> Reviewer.
@@ -185,7 +215,7 @@ class DevTeamPipeline:
         logger.info("STEP 1: ARCHITECT")
         logger.info("=" * 60)
         architect = self._create_agent("Solutions Architect", ARCHITECT_INSTRUCTIONS)
-        architect_response = architect.run(request)
+        architect_response = self._run_with_retry(architect, request, "Architect")
         architect_output = architect_response.content
 
         # Step 2: BACKEND
@@ -194,7 +224,7 @@ class DevTeamPipeline:
         logger.info("=" * 60)
         backend = self._create_agent("Backend Developer", BACKEND_INSTRUCTIONS)
         backend_prompt = f"Architect's Specification:\n\n{architect_output}"
-        backend_response = backend.run(backend_prompt)
+        backend_response = self._run_with_retry(backend, backend_prompt, "Backend")
         backend_output = backend_response.content
 
         # Step 3: FRONTEND
@@ -207,7 +237,7 @@ class DevTeamPipeline:
             f"---\n\n"
             f"Backend Developer's Report:\n\n{backend_output}"
         )
-        frontend_response = frontend.run(frontend_prompt)
+        frontend_response = self._run_with_retry(frontend, frontend_prompt, "Frontend")
         frontend_output = frontend_response.content
 
         # Step 4: DEVOPS
@@ -221,15 +251,17 @@ class DevTeamPipeline:
             f"Backend Report:\n{backend_output}\n\n"
             f"Frontend Report:\n{frontend_output}"
         )
-        devops_response = devops.run(devops_prompt)
+        self._run_with_retry(devops, devops_prompt, "DevOps")
 
         # Step 5: REVIEWER
         logger.info("=" * 60)
         logger.info("STEP 5: TEAM LEAD REVIEW")
         logger.info("=" * 60)
         reviewer = self._create_agent("Team Lead", REVIEWER_INSTRUCTIONS)
-        reviewer_response = reviewer.run(
-            "Review the project in the workspace. Clean it up and provide a final summary."
+        reviewer_response = self._run_with_retry(
+            reviewer,
+            "Review the project in the workspace. Clean it up and provide a final summary.",
+            "Reviewer"
         )
 
         return reviewer_response
