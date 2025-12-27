@@ -23,22 +23,54 @@ The council consists of 7 members (6 voters + 1 facilitator):
 
 ## Virtual Dev Team
 
-A virtual software development team that can build Proofs of Concept (PoCs) based on user requests. They have access to the file system and can write code, create documentation, and set up infrastructure.
+A virtual software development team that builds Proofs of Concept (PoCs) using a **sequential pipeline** architecture. Each step feeds its output to the next, ensuring consistency across the stack.
 
-### Team Members
+### Pipeline Architecture
 
-| Role | Responsibilities | Tools |
-|------|------------------|-------|
-| **Team Leader** | Orchestration, planning, delegation, review | File System |
-| **Frontend Developer** | React/Next.js UI implementation | File System, Shell |
-| **Backend Developer** | Python/FastAPI API implementation | File System, Shell |
-| **DevOps Engineer** | Docker, CI/CD, Infrastructure | File System, Shell |
+```
+User Request
+     │
+     ▼
+┌─────────────────────┐
+│  Solutions Architect │ → architecture.md (spec, no code)
+└─────────────────────┘
+     │
+     ▼
+┌─────────────────────┐
+│  Backend Developer   │ → Implements DB + API → backend_report.md
+└─────────────────────┘
+     │
+     ▼
+┌─────────────────────┐
+│  Frontend Developer  │ → Builds UI using exact API → frontend_report.md
+└─────────────────────┘
+     │
+     ▼
+┌─────────────────────┐
+│  DevOps Engineer     │ → Dockerfiles, docker-compose, run.sh
+└─────────────────────┘
+     │
+     ▼
+┌─────────────────────┐
+│  Team Lead (Reviewer)│ → Cleanup, verify, final summary
+└─────────────────────┘
+```
 
-### Capabilities
-- **Project Scaffolding**: Creating folder structures and READMEs.
-- **Code Generation**: Writing functional Python, JavaScript, and configuration files.
-- **Documentation**: Explaining architecture and usage.
-- **Validation**: Verifying that created files exist and code is runnable.
+### Pipeline Steps
+
+| Step | Role | Input | Output |
+|------|------|-------|--------|
+| 1 | **Solutions Architect** | User request | `architecture.md` with tech stack, DB schema, API spec, UI design |
+| 2 | **Backend Developer** | Architect's spec | Database + API implementation, `backend_report.md` |
+| 3 | **Frontend Developer** | Architect's spec + Backend report | UI implementation, `frontend_report.md` |
+| 4 | **DevOps Engineer** | All prior context | Dockerfiles, docker-compose.yml, run.sh, README |
+| 5 | **Team Lead** | Full project | Cleanup, verification, final summary |
+
+### Key Features
+- **Tech Agnostic**: The Architect chooses the best stack for each project.
+- **Context Chaining**: Each step receives accumulated output from prior steps.
+- **Contract-Based**: Reports act as contracts between pipeline steps.
+- **No Hallucination**: Frontend uses exact API endpoints from Backend report.
 
 **Note:** The team works in the `/app/workspace` directory inside the container. To persist their work, mount a volume to this path.
 

@@ -1,27 +1,26 @@
 """
 Dev Team agents module.
 
-Defines a virtual software development team:
-- Team Leader (Orchestrator)
-- Frontend Developer (React/Next.js)
-- Backend Developer (Python/FastAPI)
-- DevOps Engineer (Docker/CI)
+Defines a sequential pipeline of agents to build a Proof of Concept (PoC).
+Pipeline: Architect -> Backend -> Frontend -> DevOps -> Reviewer
 """
 
-import os
+import logging
 from pathlib import Path
+from typing import Any
 
 from agno.agent import Agent
 from agno.models.google import Gemini
-from agno.team import Team
 from agno.tools.file import FileTools
 from agno.tools.shell import ShellTools
 
 from src.config import settings
 
-# Define workspace for the agents
+logger = logging.getLogger(__name__)
+
 WORKSPACE_DIR = Path("workspace")
 WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)
+
 
 def _create_gemini_model() -> Gemini:
     """Create a Gemini model instance with configured settings."""
@@ -30,124 +29,213 @@ def _create_gemini_model() -> Gemini:
         api_key=settings.gemini_api_key,
     )
 
+
 def _create_tools() -> list:
     """Create shared tools for the team."""
     file_tools = FileTools(base_dir=WORKSPACE_DIR)
-    # Shell tools allowed to run commands
-    shell_tools = ShellTools() 
+    shell_tools = ShellTools()
     return [file_tools, shell_tools]
 
-def _create_specialists() -> list[Agent]:
+
+ARCHITECT_INSTRUCTIONS = [
+    "You are a Senior Solutions Architect.",
+    "Your goal is to design the BEST technical solution for the user's request.",
+    "You are NOT bound to any specific stack. Choose the best tools for the job based on requirements.",
+    "",
+    "YOUR TASK:",
+    "1. Analyze the User Request deeply.",
+    "2. Create a project folder with an appropriate name in the workspace root.",
+    "3. Inside that folder, create a detailed architecture.md file containing:",
+    "",
+    "   ## Project Structure",
+    "   Complete file tree of all files to be created.",
+    "",
+    "   ## Tech Stack",
+    "   Selected languages/frameworks with specific versions and reasoning.",
+    "",
+    "   ## Database Schema",
+    "   Tables/Collections, fields, types, relationships.",
+    "",
+    "   ## API Specification",
+    "   Every endpoint: Method, Path, Request Body, Response Body.",
+    "",
+    "   ## UI/UX Design",
+    "   Key screens, components, and user flows.",
+    "",
+    "CRITICAL RULES:",
+    "- Do NOT write application code. Only the specification.",
+    "- Be specific about versions and libraries.",
+    "- Ensure scope is manageable for a PoC but functionally complete.",
+    "- The Backend and Frontend developers will follow this spec EXACTLY.",
+]
+
+BACKEND_INSTRUCTIONS = [
+    "You are a Senior Backend Developer.",
+    "Your goal is to implement the backend exactly as designed by the Architect.",
+    "",
+    "INPUT:",
+    "You will receive the Architect's specification.",
+    "",
+    "YOUR TASK:",
+    "1. Read architecture.md in the project folder.",
+    "2. Initialize the project if needed (package.json, requirements.txt, etc.).",
+    "3. Implement the Database Layer (Models, Connection, Migrations).",
+    "4. Implement the API Layer (Routes, Controllers, Handlers).",
+    "5. Create a backend_report.md file summarizing:",
+    "   - All implemented endpoints with their exact paths.",
+    "   - The port the server runs on.",
+    "   - How to start the backend locally.",
+    "   - Any deviations from the spec (with justification).",
+    "",
+    "CRITICAL RULES:",
+    "- Follow the spec STRICTLY. Do not rename endpoints or change paths.",
+    "- Ensure the server can start without errors.",
+    "- Use save_file to write all code files.",
+    "- Do NOT start long-running servers. Just ensure files are correct.",
+]
+
+FRONTEND_INSTRUCTIONS = [
+    "You are a Senior Frontend Developer.",
+    "Your goal is to build the UI that connects to the Backend.",
+    "",
+    "INPUT:",
+    "You will receive the Architect's Spec and the Backend's Report.",
+    "",
+    "YOUR TASK:",
+    "1. Read the inputs carefully. Note the API URLs from backend_report.md.",
+    "2. Scaffold the Frontend application in its designated folder.",
+    "3. Implement all UI components and pages from the spec.",
+    "4. Integrate with the API using the EXACT endpoints from the Backend Report.",
+    "5. Create a frontend_report.md file summarizing progress.",
+    "",
+    "CRITICAL RULES:",
+    "- Do NOT mock data. Connect to the real backend endpoints.",
+    "- Match the design from architecture.md exactly.",
+    "- Ensure the app builds without errors.",
+    "- Use save_file to write all code files.",
+]
+
+DEVOPS_INSTRUCTIONS = [
+    "You are a DevOps Engineer.",
+    "Your goal is to ensure the entire stack runs with one command.",
+    "",
+    "INPUT:",
+    "Project context from all previous steps.",
+    "",
+    "YOUR TASK:",
+    "1. Analyze the actual file structure in the workspace.",
+    "2. Create Dockerfile for each service (backend, frontend).",
+    "3. Create a docker-compose.yml to orchestrate all services.",
+    "4. Create a run.sh script for easy startup.",
+    "5. Update the README.md with:",
+    "   - Project description",
+    "   - Tech stack summary",
+    "   - How to run (docker-compose up)",
+    "",
+    "CRITICAL RULES:",
+    "- Ensure ports in docker-compose match the application code.",
+    "- Do NOT modify application code, only infrastructure files.",
+    "- Use save_file to write all files.",
+]
+
+REVIEWER_INSTRUCTIONS = [
+    "You are the Technical Team Lead.",
+    "Your goal is to polish the final delivery.",
+    "",
+    "YOUR TASK:",
+    "1. List all files in the workspace to review the project.",
+    "2. Cleanup: Remove any empty folders or unused boilerplate files.",
+    "3. Verification: Check that imports reference files that exist.",
+    "4. Final Summary: Provide a friendly summary of what was built.",
+    "",
+    "CRITICAL RULES:",
+    "- Do NOT rewrite the application. Only fix obvious mistakes.",
+    "- Focus on cleanup and verification.",
+    "- Your response should be the final summary for the user.",
+]
+
+
+class DevTeamPipeline:
+    """Sequential pipeline that runs agents one after another with context chaining."""
+
+    def __init__(self):
+        self.tools = _create_tools()
+
+    def _create_agent(self, role: str, instructions: list[str]) -> Agent:
+        """Create an agent with the given role and instructions."""
+        return Agent(
+            role=role,
+            model=_create_gemini_model(),
+            tools=self.tools,
+            debug_mode=True,
+            instructions=instructions,
+            show_tool_calls=True,
+            markdown=True,
+        )
+
+    def run(self, request: str) -> Any:
+        """
+        Run the sequential pipeline: Architect -> Backend -> Frontend -> DevOps -> Reviewer.
+        Each step receives context from previous steps.
+        """
+        # Step 1: ARCHITECT
+        logger.info("=" * 60)
+        logger.info("STEP 1: ARCHITECT")
+        logger.info("=" * 60)
+        architect = self._create_agent("Solutions Architect", ARCHITECT_INSTRUCTIONS)
+        architect_response = architect.run(request)
+        architect_output = architect_response.content
+
+        # Step 2: BACKEND
+        logger.info("=" * 60)
+        logger.info("STEP 2: BACKEND DEVELOPER")
+        logger.info("=" * 60)
+        backend = self._create_agent("Backend Developer", BACKEND_INSTRUCTIONS)
+        backend_prompt = f"Architect's Specification:\n\n{architect_output}"
+        backend_response = backend.run(backend_prompt)
+        backend_output = backend_response.content
+
+        # Step 3: FRONTEND
+        logger.info("=" * 60)
+        logger.info("STEP 3: FRONTEND DEVELOPER")
+        logger.info("=" * 60)
+        frontend = self._create_agent("Frontend Developer", FRONTEND_INSTRUCTIONS)
+        frontend_prompt = (
+            f"Architect's Specification:\n\n{architect_output}\n\n"
+            f"---\n\n"
+            f"Backend Developer's Report:\n\n{backend_output}"
+        )
+        frontend_response = frontend.run(frontend_prompt)
+        frontend_output = frontend_response.content
+
+        # Step 4: DEVOPS
+        logger.info("=" * 60)
+        logger.info("STEP 4: DEVOPS ENGINEER")
+        logger.info("=" * 60)
+        devops = self._create_agent("DevOps Engineer", DEVOPS_INSTRUCTIONS)
+        devops_prompt = (
+            f"Project Context:\n\n"
+            f"Architect's Spec:\n{architect_output}\n\n"
+            f"Backend Report:\n{backend_output}\n\n"
+            f"Frontend Report:\n{frontend_output}"
+        )
+        devops_response = devops.run(devops_prompt)
+
+        # Step 5: REVIEWER
+        logger.info("=" * 60)
+        logger.info("STEP 5: TEAM LEAD REVIEW")
+        logger.info("=" * 60)
+        reviewer = self._create_agent("Team Lead", REVIEWER_INSTRUCTIONS)
+        reviewer_response = reviewer.run(
+            "Review the project in the workspace. Clean it up and provide a final summary."
+        )
+
+        return reviewer_response
+
+
+def create_dev_team():
     """
-    Create the specialist developers.
+    Factory function for router compatibility.
+    Returns a DevTeamPipeline instance with a .run() method.
     """
-    tools = _create_tools()
-    
-    # 1. Frontend Developer
-    frontend = Agent(
-        role="Frontend Developer",
-        model=_create_gemini_model(),
-        tools=tools,
-        debug_mode=True,
-        instructions=[
-            "You are an expert Frontend Developer specializing in React and Next.js.",
-            "Your goal is to build the user interface based on requirements.",
-            "IMPORTANT RULES:",
-            "1. ALWAYS check if a file exists before creating it using `file_exists` or `list_files`.",
-            "2. Read the markdown files before starting.",
-            "3. Use `save_file` to write code. Ensure you write complete, runnable code.",
-            "4. If you need to install packages, use `run_shell_command` (e.g., `npm install`).",
-            "5. Coordinate with the Backend Dev for API integration.",
-            "6. Always dockerize your application. Make sure that the dockerfile is in the root directory of your folder."
-        ],
-    )
-
-    # 2. Backend Developer
-    backend = Agent(
-        role="Backend Developer",
-        model=_create_gemini_model(),
-        tools=tools,
-        debug_mode=True,
-        instructions=[
-            "You are an expert Backend Developer specializing in Python (FastAPI) and Node.js.",
-            "Your goal is to build the API and business logic.",
-            "IMPORTANT RULES:",
-            "1. ALWAYS check if a file exists before creating it.",
-            "2. Read the markdown files to understand the architecture.",
-            "3. Use `save_file` to write code.",
-            "4. Provide clear API documentation or specification for the Frontend Dev.",
-            "5. Ensure the server can run locally (e.g., `uvicorn main:app`).",
-            "6. Always dockerize your application. Make sure that the dockerfile is in the root directory of your folder."
-        ],
-    )
-
-    # 3. DevOps Engineer
-    devops = Agent(
-        role="DevOps Engineer",
-        model=_create_gemini_model(),
-        tools=tools,
-        debug_mode=True,
-        instructions=[
-            "You are an expert DevOps Engineer.",
-            "Your goal is to ensure the application runs smoothly.",
-            "Tasks:",
-            "- Create `Dockerfile` and `docker-compose.yml`.",
-            "- Create run scripts (e.g., `run.sh`).",
-            "- Ensure dependencies are listed in `requirements.txt` or `package.json`.",
-            "",
-            "IMPORTANT RULES:",
-            "1. Check existing files before overwriting.",
-            "2. When testing if a server starts, NEVER run blocking commands.",
-            "   Use this pattern instead:",
-            "   a) Start the server in the background: `python main.py &` or `uvicorn main:app &`",
-            "   b) Wait briefly: `sleep 2`",
-            "   c) Check if it's running: `curl -s http://localhost:PORT/health || echo 'Server not responding'`",
-            "   d) Kill the background process: `pkill -f 'uvicorn|python main'` or `kill %1`",
-            "3. NEVER run a server without `&` at the end - it will block forever.",
-            "4. Always clean up background processes after testing.",
-        ],
-    )
-
-    return [frontend, backend, devops]
-
-def create_dev_team() -> Team:
-    """
-    Create the dev team orchestrated by a Team Leader.
-    """
-    specialists = _create_specialists()
-    
-    team_leader = Team(
-        name="Team Leader",
-        members=specialists,
-        model=_create_gemini_model(),
-        debug_mode=True,
-        instructions=[
-            "You are the Technical Team Leader of a high-performance software team.",
-            "Your goal is to implement a Proof of Concept (PoC) based on the user's request.",
-            "The team works in the `./poc` directory. If it doesn't exist, create it.",
-            "",
-            "PROCESS:",
-            "1. Analyze the user's request.",
-            "2. Create a folder for the whole project, with the name of the project (make up a name based on the request).",
-            "3. If the request includes a script to run, run it to create the boilerplate files. Otherwise, analyze the request and create the boilerplate code yourself. Don't forget git.",
-            "4. Guarantee that the markdown files existing in the project after running the last step include:",
-            "   - Project Name & Description",
-            "   - Architecture / File Structure",
-            "   - Tasks for each team and/or member",
-            "5. Based on the management plan, delegate tasks to your specialists (Frontend, Backend, DevOps).",
-            "   - Be specific about what they need to do.",
-            "   - Ensure they know where to write files.",
-            "6. Review their progress. Ask them to verify their work (e.g., 'Did you create the file?').",
-            "7. Once the code is written, ask DevOps to ensure it can be run.",
-            "8. Check the code and understand whether there are any issues. Clear any unused files. Update any README files with correct information.",
-            "9. Report back to the user with a summary of what was built and how to run it.",
-            "",
-            "CRITICAL:",
-            "- Do not hallucinate code. Ask your team to write it to disk.",
-            "- If a file is missing, ask the relevant specialist to create it.",
-            "- Ensure the final output is a runnable PoC.",
-            "- NEVER run blocking commands (like starting a server without `&`). Always run servers in background, test, then kill them.",
-        ],
-    )
-
-    return team_leader
+    return DevTeamPipeline()
