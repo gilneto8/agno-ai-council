@@ -67,6 +67,7 @@ def _create_specialists() -> list[Agent]:
         role="Backend Developer",
         model=_create_gemini_model(),
         tools=tools,
+        debug_mode=True,
         instructions=[
             "You are an expert Backend Developer specializing in Python (FastAPI) and Node.js.",
             "Your goal is to build the API and business logic.",
@@ -85,6 +86,7 @@ def _create_specialists() -> list[Agent]:
         role="DevOps Engineer",
         model=_create_gemini_model(),
         tools=tools,
+        debug_mode=True,
         instructions=[
             "You are an expert DevOps Engineer.",
             "Your goal is to ensure the application runs smoothly.",
