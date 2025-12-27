@@ -64,6 +64,7 @@ def _create_voting_members() -> list[Agent]:
     tech_architect = Agent(
         role="Technical Architect",
         model=_create_gemini_model(),
+        debug_mode=True,
         instructions=[
             SHARED_MISSION,
             "You are the Technical Architect evaluating technical feasibility.",
@@ -79,6 +80,7 @@ def _create_voting_members() -> list[Agent]:
     vc_agent = Agent(
         role="Venture Capitalist",
         model=_create_gemini_model(),
+        debug_mode=True,
         instructions=[
             SHARED_MISSION,
             "You are a Venture Capitalist evaluating market fit and potential.",
@@ -94,6 +96,7 @@ def _create_voting_members() -> list[Agent]:
     ux_designer = Agent(
         role="UX Designer",
         model=_create_gemini_model(),
+        debug_mode=True,
         instructions=[
             SHARED_MISSION,
             "You are a UX Designer evaluating user experience and journeys.",
@@ -109,6 +112,7 @@ def _create_voting_members() -> list[Agent]:
     security_auditor = Agent(
         role="Security Auditor",
         model=_create_gemini_model(),
+        debug_mode=True,
         instructions=[
             SHARED_MISSION,
             "You are the Security Auditor evaluating compliance and data risks.",
@@ -124,6 +128,7 @@ def _create_voting_members() -> list[Agent]:
     product_owner = Agent(
         role="Product Owner",
         model=_create_gemini_model(),
+        debug_mode=True,
         instructions=[
             SHARED_MISSION,
             "You are the Product Owner evaluating product-market fit.",
@@ -150,6 +155,7 @@ def _create_moderators() -> tuple[Agent, Agent]:
     contrarian = Agent(
         role="Strategic Contrarian",
         model=_create_gemini_model(),
+        debug_mode=True,
         instructions=[
             SHARED_MISSION,
             "You are the Strategic Contrarian - the designated devil's advocate.",
@@ -167,6 +173,7 @@ def _create_moderators() -> tuple[Agent, Agent]:
     synthesizer = Agent(
         role="Council Synthesizer",
         model=_create_gemini_model(),
+        debug_mode=True,
         instructions=[
             "You are the Council Synthesizer - your role is to facilitate consensus.",
             "You do NOT follow the standard output format. Instead:",
@@ -204,6 +211,7 @@ def create_council_team() -> Team:
         name="Council Moderator",
         members=all_members,
         model=_create_gemini_model(),
+        debug_mode=True,
         instructions=[
             "You are the moderator of a 7-member expert council evaluating ideas.",
             "The team is based in Portugal with limited developers. Always respond in English.",

@@ -48,6 +48,7 @@ def _create_specialists() -> list[Agent]:
         role="Frontend Developer",
         model=_create_gemini_model(),
         tools=tools,
+        debug_mode=True,
         instructions=[
             "You are an expert Frontend Developer specializing in React and Next.js.",
             "Your goal is to build the user interface based on requirements.",
@@ -57,6 +58,7 @@ def _create_specialists() -> list[Agent]:
             "3. Use `save_file` to write code. Ensure you write complete, runnable code.",
             "4. If you need to install packages, use `run_shell_command` (e.g., `npm install`).",
             "5. Coordinate with the Backend Dev for API integration.",
+            "6. Always dockerize your application. Make sure that the dockerfile is in the root directory of your folder."
         ],
     )
 
@@ -74,6 +76,7 @@ def _create_specialists() -> list[Agent]:
             "3. Use `save_file` to write code.",
             "4. Provide clear API documentation or specification for the Frontend Dev.",
             "5. Ensure the server can run locally (e.g., `uvicorn main:app`).",
+            "6. Always dockerize your application. Make sure that the dockerfile is in the root directory of your folder."
         ],
     )
 
@@ -115,10 +118,11 @@ def create_dev_team() -> Team:
         name="Team Leader",
         members=specialists,
         model=_create_gemini_model(),
+        debug_mode=True,
         instructions=[
             "You are the Technical Team Leader of a high-performance software team.",
             "Your goal is to implement a Proof of Concept (PoC) based on the user's request.",
-            "The team works in the `./workspace` directory.",
+            "The team works in the `./poc` directory. If it doesn't exist, create it.",
             "",
             "PROCESS:",
             "1. Analyze the user's request.",
@@ -133,7 +137,7 @@ def create_dev_team() -> Team:
             "   - Ensure they know where to write files.",
             "6. Review their progress. Ask them to verify their work (e.g., 'Did you create the file?').",
             "7. Once the code is written, ask DevOps to ensure it can be run.",
-            "8. Check the code and understand whether there are any issues. Clear any clutter. Update any README files with correct information.",
+            "8. Check the code and understand whether there are any issues. Clear any unused files. Update any README files with correct information.",
             "9. Report back to the user with a summary of what was built and how to run it.",
             "",
             "CRITICAL:",

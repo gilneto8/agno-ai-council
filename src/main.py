@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.config import settings
 from src.routers import council_router, dev_team_router
+from src.middleware import RequestLoggingMiddleware
 
 # Configure logging
 logging.basicConfig(
@@ -41,6 +42,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add request logging middleware
+app.add_middleware(RequestLoggingMiddleware)
 
 # Include routers
 app.include_router(council_router)
