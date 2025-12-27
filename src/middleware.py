@@ -5,7 +5,7 @@ import uuid
 from pathlib import Path
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-import contextlib
+ 
 
 # Configure the logs directory
 LOGS_DIR = Path("logs")
@@ -13,6 +13,9 @@ LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        if request.url.path == "/health":
+            return await call_next(request)
+
         # Generate a unique ID for the request
         request_id = str(uuid.uuid4())[:8]
         timestamp = time.strftime("%Y%m%d_%H%M%S")
