@@ -5,8 +5,14 @@ Defines a sequential pipeline of agents to build a Proof of Concept (PoC).
 Pipeline: Architect -> Backend -> Frontend -> DevOps -> Reviewer
 """
 
+import json
 import logging
+import os
+import subprocess
 import time
+import urllib.error
+import urllib.parse
+import urllib.request
 from pathlib import Path
 from typing import Any
 
@@ -52,7 +58,7 @@ ARCHITECT_INSTRUCTIONS = [
     "   Complete file tree of all files to be created.",
     "",
     "   ## Tech Stack",
-    "   Selected languages/frameworks with specific versions and reasoning.",
+    "   Selected languages/frameworks with specific versions and reasoning. Have preference for typed languages and frameworks.",
     "",
     "   ## Database Schema",
     "   Tables/Collections, fields, types, relationships.",
@@ -151,12 +157,14 @@ REVIEWER_INSTRUCTIONS = [
     "2. Cleanup: Remove any empty folders or unused boilerplate files.",
     "3. Verification: Check that imports reference files that exist.",
     "4. Make sure there is a README.md file with instructions on how to run the project.",
-    "5. Final Summary: Provide a friendly summary of what was built, and include the project's name. Make sure this summary is your ONLY output.",
+    "5. Create a text file called project_name.txt that ONLY contains the name given to the folder containing the project.",
+    "6. Final Summary: Provide a friendly summary of what was built. Make sure this summary is your ONLY output.",
     "",
     "CRITICAL RULES:",
-    "- Do NOT rewrite the application. Only fix obvious mistakes.",
+    "- Do NOT rewrite or move the application. Only fix obvious mistakes.",
     "- Focus on cleanup and verification.",
     "- Your response should be the final summary for the user, ONLY.",
+    "- ALWAYS make sure there is a file called project_name.txt in the project root, with the same name as the project folder.",
 ]
 
 
@@ -205,6 +213,121 @@ class DevTeamPipeline:
                 else:
                     raise
         return agent.run(prompt)  # Final attempt
+
+    def _detect_project_dir(self) -> Path:
+        project_name_path = WORKSPACE_DIR / "project_name.txt"
+        if project_name_path.exists():
+            project_name = project_name_path.read_text(encoding="utf-8").strip()
+            if project_name:
+                candidate = WORKSPACE_DIR / project_name
+                if candidate.exists() and candidate.is_dir():
+                    return candidate
+
+        # Fallback: newest directory in workspace
+        dirs = [p for p in WORKSPACE_DIR.iterdir() if p.is_dir()]
+        if not dirs:
+            raise FileNotFoundError("No project directory found in workspace")
+        return max(dirs, key=lambda p: p.stat().st_mtime)
+
+    def _github_create_repo_if_needed(self, github_user: str, github_token: str, repo_name: str) -> None:
+        payload = {
+            "name": repo_name,
+            "private": True,
+            "auto_init": False,
+        }
+        req = urllib.request.Request(
+            url="https://api.github.com/user/repos",
+            data=json.dumps(payload).encode("utf-8"),
+            method="POST",
+            headers={
+                "Authorization": f"token {github_token}",
+                "Accept": "application/vnd.github+json",
+                "Content-Type": "application/json",
+                "User-Agent": "agno-council",
+            },
+        )
+
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                if resp.status == 201:
+                    logger.info("Created GitHub repository '%s'", repo_name)
+                    return
+                logger.info("GitHub repo create returned status %s for '%s'", resp.status, repo_name)
+        except urllib.error.HTTPError as e:
+            # 422 is commonly "already exists" or validation errors
+            if e.code == 422:
+                logger.info("GitHub repository '%s' may already exist (HTTP 422)", repo_name)
+                return
+            body = ""
+            try:
+                body = e.read().decode("utf-8", errors="replace")
+            except Exception:
+                pass
+            raise RuntimeError(f"GitHub repo create failed: HTTP {e.code} {body}") from e
+
+    def _git_init_commit_push(self, project_dir: Path, github_user: str, github_token: str, repo_name: str) -> None:
+        git_email = settings.git_user_email or "poc-automator@example.com"
+        git_name = settings.git_user_name or "POC Automator"
+
+        token_escaped = urllib.parse.quote(github_token, safe="")
+        remote_url = f"https://{github_user}:{token_escaped}@github.com/{github_user}/{repo_name}.git"
+
+        commands = [
+            ["git", "init"],
+            ["git", "config", "user.email", git_email],
+            ["git", "config", "user.name", git_name],
+            ["git", "add", "."],
+            ["git", "commit", "--allow-empty", "-m", "Initial PoC"],
+            ["git", "branch", "-M", "main"],
+        ]
+
+        for cmd in commands:
+            result = subprocess.run(cmd, cwd=str(project_dir), capture_output=True, text=True)
+            if result.returncode != 0:
+                raise RuntimeError(f"Git command failed: {cmd}: {result.stderr}")
+
+        # Set remote (idempotent)
+        existing_remote = subprocess.run(
+            ["git", "remote", "get-url", "origin"],
+            cwd=str(project_dir),
+            capture_output=True,
+            text=True,
+        )
+        if existing_remote.returncode == 0:
+            subprocess.run(["git", "remote", "set-url", "origin", remote_url], cwd=str(project_dir), check=False)
+        else:
+            subprocess.run(["git", "remote", "add", "origin", remote_url], cwd=str(project_dir), check=False)
+
+        push = subprocess.run(
+            ["git", "push", "-u", "origin", "main"],
+            cwd=str(project_dir),
+            capture_output=True,
+            text=True,
+        )
+        if push.returncode != 0:
+            raise RuntimeError(f"git push failed: {push.stderr}")
+
+    def _publish_to_github(self) -> None:
+        github_user = settings.github_user
+        github_token = settings.github_token
+
+        if not github_user or not github_token:
+            raise RuntimeError(
+                "GitHub publish is required but GITHUB_USER/GITHUB_TOKEN are not set"
+            )
+
+        project_dir = self._detect_project_dir()
+        repo_name = project_dir.name
+        logger.info("Publishing project '%s' to GitHub repo '%s'", project_dir.name, repo_name)
+
+        try:
+            self._github_create_repo_if_needed(github_user, github_token, repo_name)
+            self._git_init_commit_push(project_dir, github_user, github_token, repo_name)
+            logger.info("GitHub publish completed for repo '%s'", repo_name)
+        except Exception as e:
+            # Never log tokens; error messages should not contain them.
+            logger.exception("GitHub publish failed: %s", str(e))
+            raise
 
     def run(self, request: str) -> Any:
         """
@@ -264,6 +387,8 @@ class DevTeamPipeline:
             "Review the project in the workspace. Clean it up and provide a final summary.",
             "Reviewer"
         )
+
+        self._publish_to_github()
 
         return reviewer_response
 

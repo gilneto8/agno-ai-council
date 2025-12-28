@@ -1,5 +1,7 @@
-from pydantic_settings import BaseSettings
 from functools import lru_cache
+from typing import Optional
+
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -13,6 +15,12 @@ class Settings(BaseSettings):
     gemini_api_key: str
     council_gemini_model: str = "gemini-2.0-flash-exp"
     dev_team_gemini_model: str = "gemini-2.0-flash-exp"
+
+    # GitHub Publishing (Dev Team)
+    github_user: Optional[str] = None
+    github_token: Optional[str] = None
+    git_user_email: Optional[str] = None
+    git_user_name: Optional[str] = None
 
     class Config:
         env_file = ".env"
