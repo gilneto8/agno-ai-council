@@ -156,7 +156,7 @@ REVIEWER_INSTRUCTIONS = [
     "1. List all files in the workspace to review the project.",
     "2. Cleanup: Remove any empty folders or unused boilerplate files.",
     "3. Verification: Check that imports reference files that exist.",
-    "4. Make sure there is a README.md file with instructions on how to run the project.",
+    "4. Make sure there is a README.md file with instructions on how to run the project and the context provided in the user request (including motivation provided by the user).",
     "5. Create a text file called project_name.txt that ONLY contains the name given to the folder containing the project.",
     "6. Final Summary: Provide a friendly summary of what was built. Make sure this summary is your ONLY output.",
     "",
